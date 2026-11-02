@@ -1,0 +1,16 @@
+# Secrets
+docker/.env
+
+# Data (source backup is downloaded via docker/manage.sh)
+data/source/*.bak
+data/raw/
+data/processed/
+outputs/
+
+# Python / Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# IDE
+.idea/

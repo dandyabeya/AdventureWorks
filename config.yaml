@@ -1,0 +1,58 @@
+# -----------------------------------------------------------------------------
+#  AdventureWorks pipeline configuration
+#  Re-run on other data by changing the paths only (see SCHEMA.md for the
+#  column contract of the raw input tables).
+# -----------------------------------------------------------------------------
+
+paths:
+  raw_dir: data/raw              # input tables (CSV), one file per table
+  processed_dir: data/processed  # cleaned tables + model artefacts
+  output_dir: outputs            # CSVs for Power BI
+  figures_dir: outputs/figures
+
+# Contribution margin
+cm:
+  freight_allocation: true       # true: CM = revenue - COGS - allocated freight (CM2); false: CM1
+  cost_basis: historical         # historical (cost valid at order date) | current (Product.StandardCost)
+
+# Pareto / ABC classification on cumulative share of total CM
+abc:
+  a_threshold: 0.80
+  b_threshold: 0.95
+
+# "Distant region" definition
+distance:
+  hq_name: Bothell, WA (HQ)
+  hq_lat: 47.7601
+  hq_lon: -122.2054
+  distant_km: 5000               # great-circle distance from HQ to ship-to address
+  bands_km: [0, 1000, 2500, 5000, 10000, 20000]
+
+# Price sensitivity
+elasticity:
+  exclude_volume_discounts: true # volume discounts are triggered by quantity (reverse causality)
+  min_obs: 200                   # minimum panel cells to estimate a group
+  plausible_range: [-4.0, -0.2]  # estimates outside this (or not significant) fall back to "mid"
+  assumed:                       # clearly labelled assumed elasticities (sensitivity parameter)
+    low: -0.5
+    mid: -1.5
+    high: -2.5
+
+# Customer churn
+churn:
+  snapshot_date: 2013-12-31             # features up to this date, label = next window
+  validation_snapshot_date: 2013-06-30  # earlier snapshot used for training in out-of-time test
+  window_months: 6                      # churn = no purchase within this many months after snapshot
+  random_state: 42
+
+# Scenario engine
+scenarios:
+  markup_types: [low_cm, distant, both]
+  markup_levels: [0.00, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20]
+  low_cm_rules: [abc_c, margin_below]   # abc_c: product ABC class C or negative; margin_below: CM margin < threshold
+  low_cm_margin_threshold: 0.10
+  elasticity_scenarios: [estimated, low, mid, high]
+  baseline_months: 12            # last N months per channel = annual baseline
+  churn_link: 0.5                # share of markup-induced volume loss that shows up as lost customers
+  include_spillover: true        # lost customers also stop buying non-marked-up products
+  max_customer_loss_pct: 0.05    # incremental customer loss above this is "unacceptable"
